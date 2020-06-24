@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import Header from '../../components/Header';
 
@@ -27,43 +27,71 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     async function loadFoods(): Promise<void> {
-      // TODO LOAD FOODS
+      const response = await api.get<IFoodPlate[]>('/foods');
+      setFoods(response.data);
     }
 
     loadFoods();
   }, []);
 
-  async function handleAddFood(
-    food: Omit<IFoodPlate, 'id' | 'available'>,
-  ): Promise<void> {
+  const handleAddFood = useCallback(
+    async (food: Omit<IFoodPlate, 'id' | 'available'>): Promise<void> => {
+      try {
+        const response = await api.post<IFoodPlate>('/foods', {
+          ...food,
+          available: true,
+        });
+        setFoods(state => [...state, response.data]);
+      } catch (err) {
+        console.log(err);
+      }
+    },
+    [],
+  );
+
+  const handleUpdateFood = useCallback(
+    async (food: Omit<IFoodPlate, 'id' | 'available'>): Promise<void> => {
+      try {
+        const response = await api.put<IFoodPlate>(`/foods/${editingFood.id}`, {
+          ...food,
+          available: editingFood.available,
+        });
+        setFoods(state =>
+          state.map(item =>
+            item.id === editingFood.id ? response.data : item,
+          ),
+        );
+      } catch (err) {
+        console.log(err);
+      }
+    },
+    [editingFood],
+  );
+
+  const handleDeleteFood = useCallback(async (id: number): Promise<void> => {
     try {
-      // TODO ADD A NEW FOOD PLATE TO THE API
+      await api.delete(`/foods/${id}`);
+      setFoods(state => state.filter(item => item.id !== id));
     } catch (err) {
       console.log(err);
     }
-  }
+  }, []);
 
-  async function handleUpdateFood(
-    food: Omit<IFoodPlate, 'id' | 'available'>,
-  ): Promise<void> {
-    // TODO UPDATE A FOOD PLATE ON THE API
-  }
-
-  async function handleDeleteFood(id: number): Promise<void> {
-    // TODO DELETE A FOOD PLATE FROM THE API
-  }
-
-  function toggleModal(): void {
+  const toggleModal = useCallback((): void => {
     setModalOpen(!modalOpen);
-  }
+  }, [modalOpen]);
 
-  function toggleEditModal(): void {
+  const toggleEditModal = useCallback((): void => {
     setEditModalOpen(!editModalOpen);
-  }
+  }, [editModalOpen]);
 
-  function handleEditFood(food: IFoodPlate): void {
-    // TODO SET THE CURRENT EDITING FOOD ID IN THE STATE
-  }
+  const handleEditFood = useCallback(
+    (food: IFoodPlate): void => {
+      setEditingFood(food);
+      toggleEditModal();
+    },
+    [toggleEditModal],
+  );
 
   return (
     <>
